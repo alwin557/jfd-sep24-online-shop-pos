@@ -1,1 +1,1 @@
-console.log('project baru')
+console.log('project baru nih yee')
