@@ -3,18 +3,25 @@ const moment            = require('moment')
 const m_prod_kategori   = require('../model/m_master_produk_kategori')
 const m_master_produk   = require('../model/m_master_produk')
 const m_trans_keranjang = require('../model/m_trans_keranjang')
+const m_trans_pembelian = require('../model/m_trans_pembelian')
 
 module.exports =
 {
 
     halaman_beranda: async function(req,res) {
         let data = {
+            req                     : req,
             kategoriProduk          : await m_prod_kategori.getSemua(),
             produk_diKeranjang      : await m_trans_keranjang.getJumlahProduk_diKeranjang(req),
             produkJual              : await m_master_produk.getSemua(),
             moment                  : moment,
             notifikasi              : req.query.notif,
             produkExist_diKeranjang : await m_trans_keranjang.cekProdukExist(req),
+            produk_diProses         : await m_trans_pembelian.getJumlahProduk_diProses(req),
+            detailProduk_diProses   : await m_trans_pembelian.getDetailProduk_diProses(req),
+            orderanMasuk            : await m_trans_pembelian.getJumlahOrderanMasuk(),
+            produk_diKirim          : await m_trans_pembelian.getJumlahProduk_diKirim(req),
+            detailProduk_diKirim    : await m_trans_pembelian.getDetailProduk_diKirim(req),
         }
         res.render('v_olshop/beranda', data)
     },
@@ -23,10 +30,16 @@ module.exports =
 
     halaman_index_produk: async function(req,res) {
         let data = {
+            req                 : req,
             kategoriProduk      : await m_prod_kategori.getSemua(),
             produk_diKeranjang  : await m_trans_keranjang.getJumlahProduk_diKeranjang(req),
             produkJual          : await m_master_produk.getSemua(),
             notifikasi          : req.query.notif,
+            produk_diProses     : await m_trans_pembelian.getJumlahProduk_diProses(req),
+            detailProduk_diProses   : await m_trans_pembelian.getDetailProduk_diProses(req),
+            orderanMasuk            : await m_trans_pembelian.getJumlahOrderanMasuk(),
+            produk_diKirim          : await m_trans_pembelian.getJumlahProduk_diKirim(req),
+            detailProduk_diKirim    : await m_trans_pembelian.getDetailProduk_diKirim(req),
         }
         res.render('v_olshop/produk/index', data)
     },
@@ -35,8 +48,14 @@ module.exports =
 
     halaman_form_tambah: async function(req,res) {
         let data = {
+            req                 : req,
             kategoriProduk      : await m_prod_kategori.getSemua(),
             produk_diKeranjang  : await m_trans_keranjang.getJumlahProduk_diKeranjang(req),
+            produk_diProses     : await m_trans_pembelian.getJumlahProduk_diProses(req),
+            detailProduk_diProses   : await m_trans_pembelian.getDetailProduk_diProses(req),
+            orderanMasuk            : await m_trans_pembelian.getJumlahOrderanMasuk(),
+            produk_diKirim          : await m_trans_pembelian.getJumlahProduk_diKirim(req),
+            detailProduk_diKirim    : await m_trans_pembelian.getDetailProduk_diKirim(req),
         }
         res.render('v_olshop/produk/form-tambah', data)
     },
@@ -105,10 +124,16 @@ module.exports =
     detail_produk: async function(req,res) {
         let id = req.params.id_produk
         let data = {
+            req                 : req,
             kategoriProduk      : await m_prod_kategori.getSemua(),
             produk_diKeranjang  : await m_trans_keranjang.getJumlahProduk_diKeranjang(req),
             produkJual          : await m_master_produk.getSatu( id ),
-            moment: moment,
+            produk_diProses     : await m_trans_pembelian.getJumlahProduk_diProses(req),
+            detailProduk_diProses   : await m_trans_pembelian.getDetailProduk_diProses(req),
+            orderanMasuk            : await m_trans_pembelian.getJumlahOrderanMasuk(),
+            produk_diKirim          : await m_trans_pembelian.getJumlahProduk_diKirim(req),
+            detailProduk_diKirim    : await m_trans_pembelian.getDetailProduk_diKirim(req),
+            moment              : moment,
         }
         res.render('v_olshop/produk/detail', data)
     },
@@ -130,11 +155,18 @@ module.exports =
 
     keranjang_list: async function(req,res) {
         let data = {
+            req                     : req,
             kategoriProduk          : await m_prod_kategori.getSemua(),
             produk_diKeranjang      : await m_trans_keranjang.getJumlahProduk_diKeranjang(req),
             detailProduk_keranjang  : await m_trans_keranjang.getDetailProduk_diKeranjang(req),
             moment                  : moment,
             notifikasi              : req.query.notif,
+            user_id_role            : req.session.user[0].role_id,
+            produk_diProses         : await m_trans_pembelian.getJumlahProduk_diProses(req),
+            detailProduk_diProses   : await m_trans_pembelian.getDetailProduk_diProses(req),
+            orderanMasuk            : await m_trans_pembelian.getJumlahOrderanMasuk(),
+            produk_diKirim          : await m_trans_pembelian.getJumlahProduk_diKirim(req),
+            detailProduk_diKirim    : await m_trans_pembelian.getDetailProduk_diKirim(req),
         }
         res.render('v_olshop/keranjang/list', data)
     },
@@ -151,6 +183,64 @@ module.exports =
         } catch (error) {
             res.redirect(`/olshop/keranjang/list?notif=${error.message}`)
         }
-    }
+    },
+
+
+
+    keranjang_bayar: async function(req,res) {
+        try {
+            let insert  = await m_trans_pembelian.insertSemua(req)
+            if (insert.affectedRows > 0) {
+                // hapus keranjang by id_user
+                let hapusKeranjang = await m_trans_keranjang.hapus_by_user(req)
+                if (hapusKeranjang.affectedRows > 0) {
+                    res.redirect(`/olshop?notif=Berhasil bayar`)
+                }
+            }
+        } catch (error) {
+            res.redirect(`/olshop?notif=${error.message}`)
+        }
+    },
+
+
+
+    orderanMasuk_list: async function(req,res) {
+        let semuaCustomer_ygBeli = await m_trans_pembelian.getSemuaCustomer()
+        for (const i in semuaCustomer_ygBeli) {
+            let id_user = semuaCustomer_ygBeli[i].id_user
+            semuaCustomer_ygBeli[i].produk_yang_dibeli = await m_trans_pembelian.getSemuaProduk_byCustomer(id_user)
+        }
+
+        let data = {
+            req                     : req,
+            kategoriProduk          : await m_prod_kategori.getSemua(),
+            produk_diKeranjang      : await m_trans_keranjang.getJumlahProduk_diKeranjang(req),
+            detailProduk_keranjang  : await m_trans_keranjang.getDetailProduk_diKeranjang(req),
+            moment                  : moment,
+            notifikasi              : req.query.notif,
+            user_id_role            : req.session.user[0].role_id,
+            produk_diProses         : await m_trans_pembelian.getJumlahProduk_diProses(req),
+            detailProduk_diProses   : await m_trans_pembelian.getDetailProduk_diProses(req),
+            orderanMasuk            : await m_trans_pembelian.getJumlahOrderanMasuk(),
+            orderanMasuk_detail     : semuaCustomer_ygBeli,
+            produk_diKirim          : await m_trans_pembelian.getJumlahProduk_diKirim(req),
+            detailProduk_diKirim    : await m_trans_pembelian.getDetailProduk_diKirim(req),
+        }
+        res.render('v_olshop/orderan-masuk/list', data)
+    },
+
+
+
+    orderanMasuk_prosesKirimBarang: async function(req,res) {
+        let id_customer = req.params.id_customer
+        try {
+            let update  = await m_trans_pembelian.updateDikirim_byIdCustomer(id_customer)
+            if (update.affectedRows > 0) {
+                res.redirect(`/olshop/orderan-masuk/list?notif=Berhasil bayar`)
+            }
+        } catch (error) {
+            res.redirect(`/olshop/orderan-masuk/list?notif=${error.message}`)
+        }
+    },
 
 }

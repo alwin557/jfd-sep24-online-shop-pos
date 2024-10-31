@@ -7,6 +7,7 @@ const db    = mysql.createConnection({
 })
 db.connect()
 
+
 function eksekusi(script_sql_dan_data){
     return new Promise( (resolve, reject) => {
         db.query(script_sql_dan_data, function(errorSql, hasil) {
@@ -18,6 +19,7 @@ function eksekusi(script_sql_dan_data){
         })
     })
 }
+
 
 module.exports = {
     db, eksekusi
